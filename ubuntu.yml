@@ -1,0 +1,29 @@
+---
+- hosts: ubuntu
+  sudo: true
+
+  tasks:
+
+    - name: Update apt cache
+      apt: update_cache=yes cache_valid_time=1800
+
+    - name: Upgrade packages
+      apt: upgrade=safe
+
+    - name: Install firewall, allow all
+      ufw: state=enabled policy=allow
+
+    - name: reboot
+      command: shutdown -r now
+      async: 0
+      poll: 0
+      ignore_errors: true
+
+    - name: wait to come back
+      local_action: wait_for host={{ ansible_ssh_host }} port={{ ansible_ssh_port }} delay=15 timeout=60
+
+    - shell: s=`cat /proc/uptime | cut -d' ' -f1 | cut -d'.' -f1`; printf '%dh:%dm:%ds\n' $(($s/3600)) $(($s/60)) $(($s%60))
+      register: uptime
+
+    - name: Print uptime
+      debug: msg="{{ uptime.stdout }}"
